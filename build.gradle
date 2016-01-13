@@ -1,0 +1,46 @@
+
+buildscript {
+  repositories {
+    mavenLocal()
+
+    maven {
+      url "https://plugins.gradle.org/m2/"
+    }
+  }
+}
+
+group = projectGroup
+version = projectVersion
+
+apply plugin: "application"
+
+// for the application plugin
+mainClassName = 'com.qnective.qtalkng.ApplicationStarter'
+
+dependencies {
+  compile group: 'io.vertx', name: 'vertx-core', version: qnective.getVertxVersion()
+  compile group: 'io.vertx', name: 'vertx-hazelcast', version: qnective.getVertxVersion()
+  compile group: 'io.vertx', name: 'vertx-dropwizard-metrics', version: qnective.getVertxVersion()
+
+  compile 'log4j:log4j:1.2.17'
+
+  testCompile group: 'org.reflections', name: 'reflections', version: '0.9.10'
+  testCompile 'junit:junit:4.4'
+
+}
+
+run.doFirst {
+  // remaining configuration of the application plugin must be done
+  // here because it needs the file name from the quasar
+  // configuration, which won't be available in the body of the script
+  applicationDefaultJvmArgs += [
+          "-Dvertx.logger-delegate-factory-class-name=io.vertx.core.logging.Log4jLogDelegateFactory",
+          "-ea"
+  ]
+
+  if (file(rootProject.getRootDir().getAbsolutePath() + "/log4j.properties").exists())
+  {
+    applicationDefaultJvmArgs += ["-Dlog4j.configuration=file:" + rootProject.getRootDir().getAbsolutePath() + "/log4j.properties"]
+  }
+}
+
