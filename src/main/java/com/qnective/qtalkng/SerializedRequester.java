@@ -29,16 +29,16 @@ public class SerializedRequester extends AbstractVerticle {
                                 vertx.eventBus().send(PooledBackend.MY_ADDRESS, new byte[0], h);
                             });
                     System.out.println("Requester: After awaitResult " + Thread.currentThread());
-//                    System.out.println("got reply " + reply.result().body());
-//
-//                    AsyncResult<Message<String>> reply2 = Sync.awaitResult(
-//                            (Handler<AsyncResult<Message<String>>> h) ->
-//                            {
-//                                System.out.println("sending second request");
-//                                vertx.eventBus().send(PooledBackend.MY_ADDRESS, new byte[0], h);
-//                            });
+
+                    AsyncResult<Message<String>> reply2 = Sync.awaitResult(
+                            (Handler<AsyncResult<Message<String>>> h) ->
+                            {
+                                System.out.println("sending second request");
+                                vertx.eventBus().send(PooledBackend.MY_ADDRESS, new byte[0], h);
+                            });
 
                     // do the next request
+                    System.out.println("Requester: After awaitResult2 " + Thread.currentThread());
                 }
         );
 

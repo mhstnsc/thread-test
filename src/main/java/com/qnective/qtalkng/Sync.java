@@ -15,14 +15,17 @@ class Assignable<T>
 
 public class Sync
 {
+    public static Vertx vertx = Vertx.vertx();
+    public static Context context = vertx.getOrCreateContext();
+
     public static <T> AsyncResult<T> awaitResult(Consumer<Handler<AsyncResult<T>>> handler)
     {
         final Assignable<AsyncResult<T>> theResult = new Assignable<>();
 
         CountDownLatch latch = new CountDownLatch(1);
 
-        Vertx.currentContext().executeBlocking(
-                objectFuture -> {
+        vertx.runOnContext(
+                theVoid -> {
                     System.out.println("executeBlocking handler " + Thread.currentThread());
 
                     handler.accept(new Handler<AsyncResult<T>>() {
@@ -32,14 +35,30 @@ public class Sync
                             System.out.println("executeBlocking: completion callback " + Thread.currentThread());
                             theResult.value = event;
                             latch.countDown();
-                            objectFuture.complete();
                         }
                     });
-                },
-                false,
-                asyncResult -> {
                 }
         );
+
+//        vertx.getOrCreateContext().executeBlocking(
+//                objectFuture -> {
+//                    System.out.println("executeBlocking handler " + Thread.currentThread());
+//
+//                    handler.accept(new Handler<AsyncResult<T>>() {
+//                        @Override
+//                        public void handle(AsyncResult<T> event) {
+//                            // executes in the blocking thread
+//                            System.out.println("executeBlocking: completion callback " + Thread.currentThread());
+//                            theResult.value = event;
+//                            latch.countDown();
+//                            objectFuture.complete();
+//                        }
+//                    });
+//                },
+//                false,
+//                asyncResult -> {
+//                }
+//        );
 
         System.out.println("awaitResult: Awaiting latch " + Thread.currentThread());
         try {
