@@ -1,45 +1,88 @@
 package com.qnective.qtalkng;
-
 import io.vertx.core.*;
-import io.vertx.core.eventbus.ReplyException;
-import io.vertx.core.eventbus.ReplyFailure;
 
 import java.util.concurrent.*;
 import java.util.function.Consumer;
 
 
-class Assignable<T>
-{
-    public T value;
-}
-
 public class Sync
 {
-    public static Vertx vertx = Vertx.vertx();
-    public static Context context = vertx.getOrCreateContext();
+    private static Vertx vertx = Vertx.vertx();
 
-    public static <T> T awaitEvent(Consumer<Handler<T>> handler) throws InterruptedException, ExecutionException
+    /** Synchronous wait for an asynchronous operation to finish
+     *
+     * If your handler already implements a timeout you might consider awaitResult.
+     *
+     * */
+    @SuppressWarnings("unused")
+    public static <T> T awaitEvent(int timeoutMsec, Consumer<Handler<T>> handler)
+            throws InterruptedException, ExecutionException, TimeoutException
     {
-        CompletableFuture<T> future = new CompletableFuture<>();
+        if(!Vertx.currentContext().isWorkerContext())
+        {
+            throw new UnsupportedOperationException("You should not block the eventloop thread");
+        }
+
+        CompletableFuture<T> completableFuture = new CompletableFuture<>();
 
         vertx.runOnContext(
                 aVoid ->
                 {
-                    handler.accept(future::complete);
+                    try
+                    {
+                        handler.accept(completableFuture::complete);
+                    }
+                    catch(RuntimeException ex)
+                    {
+                        completableFuture.completeExceptionally(ex);
+                    }
                 }
         );
-        return future.get();
+        return completableFuture.get(timeoutMsec, TimeUnit.MILLISECONDS);
     }
 
-    public static <T> AsyncResult<T> awaitResult(Consumer<Handler<AsyncResult<T>>> handler)
+
+    /** Wait for an AsyncResult.
+     *
+     * This function will wait indefinitelly. It is your responsability
+     * to complete the request with a failure AsyncResult in case of timeout.
+     *
+     * Typical usage is for EventBus.send should already provide you with this.
+     *
+     * */
+    @SuppressWarnings("unused")
+    public static <T> T awaitResult(Consumer<Handler<AsyncResult<T>>> handler)
             throws ExecutionException, InterruptedException
     {
-        CompletableFuture<AsyncResult<T>> completableFuture = new CompletableFuture<>();
+        if(!Vertx.currentContext().isWorkerContext())
+        {
+            throw new UnsupportedOperationException("You should not block the eventloop thread");
+        }
+
+        CompletableFuture<T> completableFuture = new CompletableFuture<>();
+
         vertx.runOnContext(
                 theVoid -> {
-                    System.out.println("executeBlocking handler " + Thread.currentThread());
-
-                    handler.accept(completableFuture::complete);
+                    try
+                    {
+                        handler.accept(
+                                asyncResult ->
+                                {
+                                    if (asyncResult.succeeded())
+                                    {
+                                        completableFuture.complete(asyncResult.result());
+                                    }
+                                    else
+                                    {
+                                        completableFuture.completeExceptionally(asyncResult.cause());
+                                    }
+                                }
+                        );
+                    }
+                    catch(RuntimeException ex)
+                    {
+                        completableFuture.completeExceptionally(ex);
+                    }
                 }
         );
 
