@@ -31,6 +31,7 @@ public class ApplicationStarter
                     System.out.println("Cluster node started....");
                     res.result().deployVerticle("com.qnective.qtalkng.PooledBackend", new DeploymentOptions().setWorker(true).setInstances(5),
                         event -> {
+                            res.result().deployVerticle("com.qnective.qtalkng.RestBackend");
                             if(event.succeeded()) {
                                 System.out.println("backend deployed " + Thread.currentThread());
                                 res.result().deployVerticle(new SerializedRequester(), new DeploymentOptions().setWorker(true));

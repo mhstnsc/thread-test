@@ -4,7 +4,7 @@ import io.vertx.core.*;
 import io.vertx.core.eventbus.ReplyException;
 import io.vertx.core.eventbus.ReplyFailure;
 
-import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.*;
 import java.util.function.Consumer;
 
 
@@ -18,74 +18,31 @@ public class Sync
     public static Vertx vertx = Vertx.vertx();
     public static Context context = vertx.getOrCreateContext();
 
-    public static <T> AsyncResult<T> awaitResult(Consumer<Handler<AsyncResult<T>>> handler)
+    public static <T> T awaitEvent(Consumer<Handler<T>> handler) throws InterruptedException, ExecutionException
     {
-        final Assignable<AsyncResult<T>> theResult = new Assignable<>();
+        CompletableFuture<T> future = new CompletableFuture<>();
 
-        CountDownLatch latch = new CountDownLatch(1);
+        vertx.runOnContext(
+                aVoid ->
+                {
+                    handler.accept(future::complete);
+                }
+        );
+        return future.get();
+    }
 
+    public static <T> AsyncResult<T> awaitResult(Consumer<Handler<AsyncResult<T>>> handler)
+            throws ExecutionException, InterruptedException
+    {
+        CompletableFuture<AsyncResult<T>> completableFuture = new CompletableFuture<>();
         vertx.runOnContext(
                 theVoid -> {
                     System.out.println("executeBlocking handler " + Thread.currentThread());
 
-                    handler.accept(new Handler<AsyncResult<T>>() {
-                        @Override
-                        public void handle(AsyncResult<T> event) {
-                            // executes in the blocking thread
-                            System.out.println("executeBlocking: completion callback " + Thread.currentThread());
-                            theResult.value = event;
-                            latch.countDown();
-                        }
-                    });
+                    handler.accept(completableFuture::complete);
                 }
         );
 
-//        vertx.getOrCreateContext().executeBlocking(
-//                objectFuture -> {
-//                    System.out.println("executeBlocking handler " + Thread.currentThread());
-//
-//                    handler.accept(new Handler<AsyncResult<T>>() {
-//                        @Override
-//                        public void handle(AsyncResult<T> event) {
-//                            // executes in the blocking thread
-//                            System.out.println("executeBlocking: completion callback " + Thread.currentThread());
-//                            theResult.value = event;
-//                            latch.countDown();
-//                            objectFuture.complete();
-//                        }
-//                    });
-//                },
-//                false,
-//                asyncResult -> {
-//                }
-//        );
-
-        System.out.println("awaitResult: Awaiting latch " + Thread.currentThread());
-        try {
-            latch.await();
-            return theResult.value;
-        } catch (InterruptedException e) {
-            return new AsyncResult<T>() {
-                @Override
-                public T result() {
-                    return null;
-                }
-
-                @Override
-                public Throwable cause() {
-                    return new ReplyException(ReplyFailure.TIMEOUT);
-                }
-
-                @Override
-                public boolean succeeded() {
-                    return false;
-                }
-
-                @Override
-                public boolean failed() {
-                    return true;
-                }
-            };
-        }
+        return completableFuture.get();
     }
 }

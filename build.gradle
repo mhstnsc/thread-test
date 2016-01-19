@@ -1,26 +1,22 @@
+repositories {
+	jcenter()
 
-buildscript {
-  repositories {
-    mavenLocal()
-
-    maven {
-      url "https://plugins.gradle.org/m2/"
-    }
-  }
+	maven {
+	  url "https://oss.sonatype.org/content/repositories/snapshots"
+	}
 }
 
 group = projectGroup
 version = projectVersion
 
 apply plugin: "application"
-
-// for the application plugin
-mainClassName = 'com.qnective.qtalkng.ApplicationStarter'
+apply plugin: "java"
 
 dependencies {
-  compile group: 'io.vertx', name: 'vertx-core', version: qnective.getVertxVersion()
-  compile group: 'io.vertx', name: 'vertx-hazelcast', version: qnective.getVertxVersion()
-  compile group: 'io.vertx', name: 'vertx-dropwizard-metrics', version: qnective.getVertxVersion()
+  compile group: 'io.vertx', name: 'vertx-core', version: vertxVersion
+  compile group: 'io.vertx', name: 'vertx-web', version: vertxVersion
+  compile group: 'io.vertx', name: 'vertx-hazelcast', version: vertxVersion
+  compile group: 'io.vertx', name: 'vertx-dropwizard-metrics', version: vertxVersion
 
   compile 'log4j:log4j:1.2.17'
 
